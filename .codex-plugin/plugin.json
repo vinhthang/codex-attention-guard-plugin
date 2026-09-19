@@ -1,0 +1,14 @@
+{
+  "name": "attention-guard",
+  "version": "0.1.0",
+  "description": "Context window protection, hybrid RTK token compression, two-stage anti-looping circuit breaker, and turn verification gating for Codex CLI and ChatGPT app.",
+  "interface": {
+    "displayName": "Attention Guard",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Read",
+      "Write"
+    ]
+  },
+  "hooks": "./hooks/hooks.json"
+}
