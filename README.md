@@ -9,7 +9,9 @@ Context window protection, hybrid RTK token compression, two-stage anti-looping 
 Codex Attention Guard protects the agent's context window from Attention Dilution and repetitive looping failure modes:
 
 - **Hybrid RTK Token Compression**: Intercepts shell test/build runners (`pytest`, `cargo test`, `mvn`, `npm test`, `vitest`, `go test`, `dotnet test`) and automatically wraps them with `rtk test` or `rtk err`.
-- **Diagnostic Trace Offloading**: Commands producing $> 2\text{ KB}$ outputs are truncated to a compact 1 KB summary with full traces offloaded to `$CODEX_HOME/diagnostics/<session_id>_test_failure.log`.
+- **2KB Diagnostic Trace Offloading**: Commands producing $> 2\text{ KB}$ outputs (~500 tokens) are offloaded to disk:
+  - **Saved to Disk**: 100% of the raw, unabridged output is saved to `$CODEX_HOME/diagnostics/<session_id>_test_failure.log`.
+  - **Returned to Prompt**: A compact ~1 KB summary (head 500 chars + log file pointer + tail 500 chars showing the failing assertion), saving ~95% of output tokens while ensuring deep stack frames remain accessible via `read_file` or `grep`.
 - **Two-Stage Anti-Looping Circuit Breaker**:
   - `FAILURE_STAGE_1`: Triggered on 1st test/build failure. Blocks speculative edits to production files; permits only test reproducers (`test_*`, `*_test.*`, `*Test.*`, `*.spec.*`) or diagnostic investigation files (`diagnosis.md`, `rca.md`, `*.log`).
   - `FAILURE_STAGE_2_TRIPPED`: Triggered on consecutive failure ($\ge 2$). Hard-blocks all file mutations until reset or root cause is isolated.
