@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 -I scripts/session_init.py",
+            "command": "python3 -I -c \"import os,sys,runpy; p=os.environ.get('PLUGIN_ROOT') or (os.path.expanduser('~/.codex/plugins/cache/attention-guard-local/attention-guard/0.1.0') if os.path.exists(os.path.expanduser('~/.codex/plugins/cache/attention-guard-local/attention-guard/0.1.0')) else os.path.expanduser('~/github/codex-attention-guard-plugin')); s=os.path.join(p, 'scripts', 'session_init.py'); sys.argv=[s]; sys.path.insert(0, os.path.join(p, 'scripts')); runpy.run_path(s, run_name='__main__')\"",
             "timeout": 10
           }
         ]
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 -I scripts/prompt_refresh.py",
+            "command": "python3 -I -c \"import os,sys,runpy; p=os.environ.get('PLUGIN_ROOT') or (os.path.expanduser('~/.codex/plugins/cache/attention-guard-local/attention-guard/0.1.0') if os.path.exists(os.path.expanduser('~/.codex/plugins/cache/attention-guard-local/attention-guard/0.1.0')) else os.path.expanduser('~/github/codex-attention-guard-plugin')); s=os.path.join(p, 'scripts', 'prompt_refresh.py'); sys.argv=[s]; sys.path.insert(0, os.path.join(p, 'scripts')); runpy.run_path(s, run_name='__main__')\"",
             "timeout": 10
           }
         ]
@@ -27,7 +27,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 -I scripts/pre_tool_guard.py",
+            "command": "python3 -I -c \"import os,sys,runpy; p=os.environ.get('PLUGIN_ROOT') or (os.path.expanduser('~/.codex/plugins/cache/attention-guard-local/attention-guard/0.1.0') if os.path.exists(os.path.expanduser('~/.codex/plugins/cache/attention-guard-local/attention-guard/0.1.0')) else os.path.expanduser('~/github/codex-attention-guard-plugin')); s=os.path.join(p, 'scripts', 'pre_tool_guard.py'); sys.argv=[s]; sys.path.insert(0, os.path.join(p, 'scripts')); runpy.run_path(s, run_name='__main__')\"",
             "timeout": 10
           }
         ]
@@ -38,7 +38,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 -I scripts/post_tool_guard.py",
+            "command": "python3 -I -c \"import os,sys,runpy; p=os.environ.get('PLUGIN_ROOT') or (os.path.expanduser('~/.codex/plugins/cache/attention-guard-local/attention-guard/0.1.0') if os.path.exists(os.path.expanduser('~/.codex/plugins/cache/attention-guard-local/attention-guard/0.1.0')) else os.path.expanduser('~/github/codex-attention-guard-plugin')); s=os.path.join(p, 'scripts', 'post_tool_guard.py'); sys.argv=[s]; sys.path.insert(0, os.path.join(p, 'scripts')); runpy.run_path(s, run_name='__main__')\"",
             "timeout": 10
           }
         ]
@@ -49,7 +49,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 -I scripts/stop_quality_gate.py",
+            "command": "python3 -I -c \"import os,sys,runpy; p=os.environ.get('PLUGIN_ROOT') or (os.path.expanduser('~/.codex/plugins/cache/attention-guard-local/attention-guard/0.1.0') if os.path.exists(os.path.expanduser('~/.codex/plugins/cache/attention-guard-local/attention-guard/0.1.0')) else os.path.expanduser('~/github/codex-attention-guard-plugin')); s=os.path.join(p, 'scripts', 'stop_quality_gate.py'); sys.argv=[s]; sys.path.insert(0, os.path.join(p, 'scripts')); runpy.run_path(s, run_name='__main__')\"",
             "timeout": 10
           }
         ]
