@@ -110,3 +110,26 @@ def test_turn_increment_and_events(temp_ledger):
     assert temp_ledger.increment_turn("sess-turn") == 2
     temp_ledger.record_tool_call("sess-turn", "bash", {"command": "ls"})
     temp_ledger.record_turn_event("sess-turn", 2, "CHECKPOINT", "done")
+
+
+def test_record_failure(temp_ledger):
+    temp_ledger.init_session("sess-fail")
+    temp_ledger.record_failure(
+        session_id="sess-fail",
+        command="pytest tests/broken.py",
+        exit_code=1,
+        output_summary="Failed 1 test",
+        log_path="/tmp/diag.log"
+    )
+    conn = sqlite3.connect(temp_ledger.db_path)
+    c = conn.cursor()
+    c.execute("SELECT session_id, command, exit_code, output_summary, log_path FROM failure_events WHERE session_id = 'sess-fail'")
+    row = c.fetchone()
+    assert row is not None
+    assert row[0] == "sess-fail"
+    assert row[1] == "pytest tests/broken.py"
+    assert row[2] == 1
+    assert row[3] == "Failed 1 test"
+    assert row[4] == "/tmp/diag.log"
+    conn.close()
+
