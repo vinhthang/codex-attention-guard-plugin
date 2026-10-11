@@ -17,15 +17,23 @@ class Event(str, Enum):
     RESET = "RESET"
 
 
-def is_test_or_diagnostic_file(file_path: str) -> bool:
+def is_diagnostic_or_doc_file(file_path: str) -> bool:
     if not file_path:
         return False
-    
+
     basename = os.path.basename(file_path)
     lower_name = basename.lower()
     norm_path = file_path.replace("\\", "/").lower()
 
-    # Diagnostic doc patterns
+    if (
+        file_path.lower().endswith((".md", ".markdown"))
+        or "/docs/" in norm_path
+        or "/specs/" in norm_path
+        or norm_path.startswith("docs/")
+        or norm_path.startswith("specs/")
+    ):
+        return True
+
     if lower_name in ("diagnosis.md", "rca.md", "root_cause.md", "investigation.md"):
         return True
     if lower_name.startswith("diagnosis") or lower_name.startswith("rca_") or lower_name.startswith("rca-"):
@@ -33,7 +41,17 @@ def is_test_or_diagnostic_file(file_path: str) -> bool:
     if lower_name.endswith(".log"):
         return True
 
-    # Test / Reproducer patterns:
+    return False
+
+
+def is_test_reproducer_file(file_path: str) -> bool:
+    if not file_path:
+        return False
+
+    basename = os.path.basename(file_path)
+    lower_name = basename.lower()
+    norm_path = file_path.replace("\\", "/").lower()
+
     # 1. test_* or *_test.*
     if re.match(r"^test_.*\..+$", basename, re.IGNORECASE):
         return True
@@ -49,10 +67,14 @@ def is_test_or_diagnostic_file(file_path: str) -> bool:
         return True
 
     # 4. In a dedicated tests directory with test in filename
-    if any(d in norm_path for d in ["/tests/", "/test/", "/__tests__/"]):
+    if any(d in norm_path for d in ["/tests/", "/test/", "/__tests__/", "tests/", "test/", "__tests__/"]):
         return True
 
     return False
+
+
+def is_test_or_diagnostic_file(file_path: str) -> bool:
+    return is_diagnostic_or_doc_file(file_path) or is_test_reproducer_file(file_path)
 
 
 def can_mutate_file(state: str, file_path: str) -> tuple[bool, str]:
@@ -65,15 +87,17 @@ def can_mutate_file(state: str, file_path: str) -> tuple[bool, str]:
         return (
             False,
             f"Speculative edit blocked in FAILURE_STAGE_1: '{file_path}' is not a test reproducer "
-            f"(test_*, *_test.*, *Test.*, *.spec.*) or diagnostic doc (diagnosis.md, rca.md, *.log)."
+            f"(test_*, *_test.*, *Test.*, *.spec.*) or documentation/diagnostic doc (*.md, docs/**, diagnosis.md, rca.md, *.log)."
         )
 
     if state == State.FAILURE_STAGE_2_TRIPPED.value:
+        if is_diagnostic_or_doc_file(file_path):
+            return True, ""
         return (
             False,
             f"Circuit breaker TRIPPED (FAILURE_STAGE_2_TRIPPED): Consecutive test failures. "
-            f"All file mutations are blocked. Stop speculative modifications, isolate root cause, "
-            f"and reset the circuit breaker."
+            f"Code and test modifications are blocked. Stop speculative modifications, author diagnostic docs "
+            f"(diagnosis.md, rca.md, *.log) or markdown documentation to isolate root cause, and reset the circuit breaker."
         )
 
     return True, ""

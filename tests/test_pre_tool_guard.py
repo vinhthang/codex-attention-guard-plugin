@@ -135,6 +135,32 @@ def test_failure_stage_2_blocks_all_mutations(test_env):
     assert "Circuit breaker TRIPPED" in res.stderr
 
 
+def test_failure_stage_2_allows_diagnostic_and_markdown(test_env):
+    db_path, env = test_env
+    ledger = Ledger(db_path)
+    ledger.init_session("test-session")
+    ledger.set_state("test-session", State.FAILURE_STAGE_2_TRIPPED.value)
+
+    for p in ["diagnosis.md", "docs/walkthrough.md", "rca.md"]:
+        res = run_pre_guard({"tool_name": "write_file", "tool_input": {"path": p, "content": "diag content"}}, env)
+        assert res.returncode == 0
+
+    res = run_pre_guard({"tool_name": "write_file", "tool_input": {"path": "src/service.py", "content": "print('ok')"}}, env)
+    assert res.returncode == 1
+    assert "Circuit breaker TRIPPED" in res.stderr
+
+
+def test_failure_stage_1_allows_markdown_docs(test_env):
+    db_path, env = test_env
+    ledger = Ledger(db_path)
+    ledger.init_session("test-session")
+    ledger.set_state("test-session", State.FAILURE_STAGE_1.value)
+
+    for p in ["README.md", "docs/spec.md"]:
+        res = run_pre_guard({"tool_name": "write_file", "tool_input": {"path": p, "content": "# Doc"}}, env)
+        assert res.returncode == 0
+
+
 def test_pre_guard_command_wrapping_execution(test_env):
     _, env = test_env
     payload = {

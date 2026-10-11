@@ -30,13 +30,13 @@ The plugin monitors command exit codes and enforces a strict Finite State Machin
 2. **`FAILURE_STAGE_1` (Speculative Edit Barrier)**:
    - **Trigger**: Occurs immediately upon the first non-zero exit code of a test or build command.
    - **Enforcement**: Production file modifications are strictly blocked.
-   - **Permitted Writes**: Only isolated test reproducers (`test_*`, `*_test.*`, `*Test.*`, `*.spec.*`) or diagnostic investigation files (`diagnosis.md`, `rca.md`, `*.log`) can be written or edited.
+   - **Permitted Writes**: Test reproducers (`test_*`, `*_test.*`, `*Test.*`, `*.spec.*`), diagnostic investigation files (`diagnosis.md`, `rca.md`, `*.log`), and markdown documentation (`*.md`, `docs/**`).
    - **Required Action**: Author an isolated reproducer that demonstrates the failure before touching production code.
 
 3. **`FAILURE_STAGE_2_TRIPPED` (Hard Circuit Breaker)**:
    - **Trigger**: Occurs upon consecutive test or build failures (streak $\ge 2$).
-   - **Enforcement**: All file mutations are completely blocked.
-   - **Required Action**: Stop speculative loops immediately. Re-examine the root cause, inspect diagnostic logs, or reset the circuit breaker once a root-cause plan is formulated.
+   - **Enforcement**: Code and test modifications are blocked. Diagnostic docs (`diagnosis.md`, `rca.md`, `*.log`) and markdown documentation (`*.md`, `docs/**`) remain permitted to isolate root cause.
+   - **Required Action**: Stop speculative loops immediately. Author diagnostic documentation to isolate root cause, escalate to human or peer review, and reset the circuit breaker once a root-cause plan is formulated.
 
 4. **`RECOVERY_VERIFIED`**:
    - **Trigger**: Occurs when a test execution passes (exit code 0).
@@ -65,5 +65,7 @@ To protect context tokens from output bloat:
 
 Before concluding a turn (`Stop` hook):
 
-1. **Verification Check**: All file modifications made during the session must be verified by passing test runs. Turns with unverified code modifications are rejected.
-2. **Walkthrough Requirement**: A `walkthrough.md` (or summary document) documenting the changes and test results must be present or updated.
+1. **Circuit Breaker Tripped Escalation**: If the circuit breaker is TRIPPED (`FAILURE_STAGE_2_TRIPPED`), the gate allows turn completion to enable human escalation and root-cause reporting.
+2. **Code Verification Check**: Only modified code files require passing test verification before concluding a turn. Non-code files (markdown documentation, plain text, configuration/data files) do not block completion without tests.
+3. **Walkthrough Requirement**: When modifications occur, a `walkthrough.md` (or summary document) documenting the changes must be present or updated. Read-only turns with zero file modifications pass cleanly without requiring a walkthrough.
+4. **Bypass Overrides**: Direct escalation questions or commands with bypass/force flags (`ATTENTION_GUARD_BYPASS=1`, payload `bypass`/`force`) bypass the gate.

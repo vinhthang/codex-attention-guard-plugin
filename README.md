@@ -13,10 +13,10 @@ Codex Attention Guard protects the agent's context window from Attention Dilutio
   - **Saved to Disk**: 100% of the raw, unabridged output is saved to `$CODEX_HOME/diagnostics/<session_id>_test_failure.log`.
   - **Returned to Prompt**: A compact ~1 KB summary (head 500 chars + log file pointer + tail 500 chars showing the failing assertion), saving ~95% of output tokens while ensuring deep stack frames remain accessible via `read_file` or `grep`.
 - **Two-Stage Anti-Looping Circuit Breaker**:
-  - `FAILURE_STAGE_1`: Triggered on 1st test/build failure. Blocks speculative edits to production files; permits only test reproducers (`test_*`, `*_test.*`, `*Test.*`, `*.spec.*`) or diagnostic investigation files (`diagnosis.md`, `rca.md`, `*.log`).
-  - `FAILURE_STAGE_2_TRIPPED`: Triggered on consecutive failure ($\ge 2$). Hard-blocks all file mutations until reset or root cause is isolated.
+  - `FAILURE_STAGE_1`: Triggered on 1st test/build failure. Blocks speculative edits to production files; permits test reproducers (`test_*`, `*_test.*`, `*Test.*`, `*.spec.*`), diagnostic investigation files (`diagnosis.md`, `rca.md`, `*.log`), and markdown documentation (`*.md`, `docs/**`).
+  - `FAILURE_STAGE_2_TRIPPED`: Triggered on consecutive failure ($\ge 2$). Blocks code and test modifications, while diagnostic files (`diagnosis.md`, `rca.md`, `*.log`) and markdown documentation (`*.md`, `docs/**`) remain permitted to isolate root cause.
   - `RECOVERY_VERIFIED`: Triggered when tests pass, verifying changes and resetting failure streaks.
-- **Turn Quality Gating**: `Stop` hook validates that no unverified file modifications remain in the session and that a walkthrough or summary artifact (`walkthrough.md`) has been created or updated.
+- **Turn Quality Gating**: `Stop` hook validates that no unverified code modifications remain in the session and that a walkthrough or summary artifact (`walkthrough.md`) has been created or updated (when modifications occurred). Allows clean completion when the circuit breaker is tripped (for human escalation), on pure documentation edits, on read-only turns, or when explicit bypass flags are supplied.
 
 ---
 
@@ -30,7 +30,7 @@ The plugin integrates seamlessly with Codex CLI via `.codex-plugin/plugin.json` 
 | `UserPromptSubmit` | `scripts/prompt_refresh.py` | Refreshes rules every 5 turns or during failure stages |
 | `PreToolUse` | `scripts/pre_tool_guard.py` | RTK command wrapping; blocks speculative file edits in failure states |
 | `PostToolUse` | `scripts/post_tool_guard.py` | Evaluates command results; offloads $>2\text{KB}$ traces; transitions FSM |
-| `Stop` | `scripts/stop_quality_gate.py` | Rejects turn conclusion if unverified edits or missing walkthrough |
+| `Stop` | `scripts/stop_quality_gate.py` | Validates turn quality: checks unverified code edits and walkthrough; permits CB escalation |
 
 ### Persistent Ledger
 

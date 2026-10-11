@@ -5,6 +5,7 @@ import sys
 import tempfile
 import pytest
 
+from scripts.fsm import State
 from scripts.ledger import Ledger
 
 
@@ -79,5 +80,54 @@ def test_pass_on_verified_edits_and_walkthrough(test_env):
         f.write("# Turn Walkthrough\nVerified all tests pass.\n")
 
     payload = {"cwd": workspace_dir}
+    res = run_stop_gate(payload, env, cwd=workspace_dir)
+    assert res.returncode == 0
+
+
+def test_pass_on_markdown_only_edits_without_tests(test_env):
+    db_path, workspace_dir, env = test_env
+    ledger = Ledger(db_path)
+    ledger.init_session("test-stop-session")
+    ledger.record_file_edit("test-stop-session", "README.md")
+
+    walkthrough_path = os.path.join(workspace_dir, "walkthrough.md")
+    with open(walkthrough_path, "w", encoding="utf-8") as f:
+        f.write("# Walkthrough\nDocs updated.\n")
+
+    payload = {"cwd": workspace_dir}
+    res = run_stop_gate(payload, env, cwd=workspace_dir)
+    assert res.returncode == 0
+
+
+def test_pass_on_no_modifications_without_walkthrough(test_env):
+    db_path, workspace_dir, env = test_env
+    ledger = Ledger(db_path)
+    ledger.init_session("test-stop-session")
+
+    payload = {"cwd": workspace_dir}
+    res = run_stop_gate(payload, env, cwd=workspace_dir)
+    assert res.returncode == 0
+
+
+def test_pass_when_circuit_breaker_tripped(test_env):
+    db_path, workspace_dir, env = test_env
+    ledger = Ledger(db_path)
+    ledger.init_session("test-stop-session")
+    ledger.set_state("test-stop-session", State.FAILURE_STAGE_2_TRIPPED.value)
+    ledger.record_file_edit("test-stop-session", "src/service.py")
+
+    payload = {"cwd": workspace_dir}
+    res = run_stop_gate(payload, env, cwd=workspace_dir)
+    assert res.returncode == 0
+    assert "[STOP GATE] Circuit breaker is TRIPPED" in res.stderr
+
+
+def test_pass_on_bypass_flag(test_env):
+    db_path, workspace_dir, env = test_env
+    ledger = Ledger(db_path)
+    ledger.init_session("test-stop-session")
+    ledger.record_file_edit("test-stop-session", "src/service.py")
+
+    payload = {"cwd": workspace_dir, "bypass": True}
     res = run_stop_gate(payload, env, cwd=workspace_dir)
     assert res.returncode == 0

@@ -6,7 +6,24 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 if SCRIPT_DIR not in sys.path:
     sys.path.insert(0, SCRIPT_DIR)
 
+try:
+    from .fsm import State
+except ImportError:
+    from fsm import State
 from ledger import Ledger
+
+
+def is_code_file(path: str) -> bool:
+    if not path:
+        return False
+    lower = path.lower()
+    doc_exts = (".md", ".markdown", ".txt", ".rst", ".adoc", ".log")
+    if lower.endswith(doc_exts):
+        return False
+    data_exts = (".json", ".yaml", ".yml", ".toml", ".csv", ".tsv", ".ini", ".cfg", ".xml")
+    if lower.endswith(data_exts):
+        return False
+    return True
 
 
 def has_walkthrough_artifact(session_id: str, data: dict, ledger: Ledger) -> bool:
@@ -53,11 +70,17 @@ def has_walkthrough_artifact(session_id: str, data: dict, ledger: Ledger) -> boo
 
 
 def main() -> None:
+    if os.environ.get("ATTENTION_GUARD_BYPASS") == "1":
+        sys.exit(0)
+
     try:
         raw = sys.stdin.read()
         data = json.loads(raw) if raw.strip() else {}
     except Exception:
         data = {}
+
+    if data.get("bypass") or data.get("force") or data.get("type") in ("question", "escalation", "ask_question", "error"):
+        sys.exit(0)
 
     session_id = (
         data.get("session_id")
@@ -69,18 +92,23 @@ def main() -> None:
 
     ledger = Ledger()
 
-    # 1. Check unverified file modifications
-    if ledger.is_unverified(session_id):
-        unverified_files = ledger.get_unverified_files(session_id)
-        file_list = ", ".join(unverified_files) if unverified_files else "modified files"
+    # If circuit breaker is TRIPPED, allow turn completion for escalation and root-cause reporting
+    if ledger.get_state(session_id) == State.FAILURE_STAGE_2_TRIPPED.value:
+        sys.stderr.write("[STOP GATE] Circuit breaker is TRIPPED (FAILURE_STAGE_2_TRIPPED); allowing turn completion for human escalation and root-cause reporting.\n")
+        sys.exit(0)
+
+    # 1. Check unverified code files
+    unverified_files = [f for f in ledger.get_unverified_files(session_id) if is_code_file(f)]
+    if unverified_files:
+        file_list = ", ".join(unverified_files)
         sys.stderr.write(
             f"[STOP GATE REJECTED] Unverified modifications remain in session: {file_list}. "
             f"Run passing tests to verify modifications before completing the turn.\n"
         )
         sys.exit(1)
 
-    # 2. Check walkthrough / summary artifact
-    if not has_walkthrough_artifact(session_id, data, ledger):
+    # 2. Check walkthrough requirement only if modifications occurred
+    if ledger.has_any_modifications(session_id) and not has_walkthrough_artifact(session_id, data, ledger):
         sys.stderr.write(
             "[STOP GATE REJECTED] Missing walkthrough or summary artifact. "
             "Author or update walkthrough.md to document verified changes before completing the turn.\n"
