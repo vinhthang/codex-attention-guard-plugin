@@ -64,6 +64,7 @@ def test_failure_increment_and_state_transitions(test_env):
     assert res1.returncode == 0
     assert ledger.get_state("test-post-session") == State.FAILURE_STAGE_1.value
     assert ledger.get_failure_streak("test-post-session") == 1
+    assert "[ATTENTION GUARD - ATTEMPT 1]: Test failure detected. Speculative in-place edits are discouraged. Author an isolated test reproducer (test_*, *_test.*) or diagnostic doc (diagnosis.md, rca.md) before fixing code.\n" in res1.stderr
 
     # 2nd consecutive test failure -> TRIPPED
     payload2 = {
@@ -75,6 +76,7 @@ def test_failure_increment_and_state_transitions(test_env):
     assert res2.returncode == 0
     assert ledger.get_state("test-post-session") == State.FAILURE_STAGE_2_TRIPPED.value
     assert ledger.get_failure_streak("test-post-session") == 2
+    assert "[ATTENTION GUARD - ATTEMPT 2]: Consecutive test failures. Circuit breaker tripped: stop speculative trial-and-error edits immediately. Isolate root cause in diagnosis.md or rca.md.\n" in res2.stderr
 
 
 def test_output_passes_through_untouched_without_truncation(test_env):

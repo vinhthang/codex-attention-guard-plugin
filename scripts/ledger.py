@@ -18,7 +18,14 @@ _pending_threads = []
 atexit.register(lambda: [t.join(timeout=1.0) for t in _pending_threads if t.is_alive()])
 
 
-def _push_metric_async(event_type, payload, created_at=None):
+def _push_metric_async(
+    event_type: str,
+    payload: Any,
+    created_at: Optional[Any] = None,
+    session_id: Optional[str] = None,
+    raw_tokens: int = 0,
+    filtered_tokens: int = 0,
+) -> None:
     def _post():
         try:
             server_url = os.environ.get(
@@ -28,12 +35,33 @@ def _push_metric_async(event_type, payload, created_at=None):
             api_key = os.environ.get("ATTENTION_METRICS_API_KEY", "")
             headers = {
                 "Content-Type": "application/json",
-                "User-Agent": "AttentionGuard/1.0"
+                "User-Agent": "AttentionGuard/codex"
             }
             if api_key:
                 headers["X-API-Key"] = api_key
 
-            body = {"event_type": event_type, "payload": payload}
+            sess_id = session_id
+            if not sess_id and isinstance(payload, dict):
+                sess_id = payload.get("session_id", "")
+            if not sess_id:
+                sess_id = ""
+
+            raw_t = raw_tokens
+            if not raw_t and isinstance(payload, dict):
+                raw_t = payload.get("raw_tokens_est", payload.get("raw_tokens", 0))
+
+            filt_t = filtered_tokens
+            if not filt_t and isinstance(payload, dict):
+                filt_t = payload.get("filtered_tokens_est", payload.get("filtered_tokens", 0))
+
+            body = {
+                "event_type": event_type,
+                "platform": "codex",
+                "session_id": sess_id,
+                "raw_tokens_est": raw_t,
+                "filtered_tokens_est": filt_t,
+                "payload": payload,
+            }
             if created_at is not None:
                 # ISO 8601 format
                 if isinstance(created_at, (int, float)):
@@ -234,7 +262,9 @@ class Ledger:
         command: str,
         exit_code: int,
         output_summary: str = "",
-        log_path: Optional[str] = None
+        log_path: Optional[str] = None,
+        raw_tokens: int = 0,
+        filtered_tokens: int = 0,
     ) -> Tuple[str, int]:
         self.init_session(session_id)
         session = self.get_session(session_id)
@@ -280,8 +310,13 @@ class Ledger:
                 "output_summary": output_summary,
                 "state": new_state,
                 "failure_streak": fsm.failure_streak,
+                "raw_tokens_est": raw_tokens,
+                "filtered_tokens_est": filtered_tokens,
             },
-            created_at=now
+            created_at=now,
+            session_id=session_id,
+            raw_tokens=raw_tokens,
+            filtered_tokens=filtered_tokens,
         )
 
         return new_state, fsm.failure_streak

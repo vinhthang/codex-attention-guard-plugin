@@ -1,3 +1,4 @@
+import json
 import os
 import sqlite3
 import tempfile
@@ -132,4 +133,41 @@ def test_record_failure(temp_ledger):
     assert row[3] == "Failed 1 test"
     assert row[4] == "/tmp/diag.log"
     conn.close()
+
+
+def test_push_metric_async_codex_headers_and_body(monkeypatch):
+    import urllib.request
+    from scripts.ledger import _push_metric_async
+
+    captured_requests = []
+
+    def mock_urlopen(req, *args, **kwargs):
+        captured_requests.append(req)
+        class DummyResponse:
+            def read(self):
+                return b'{"ok":true}'
+        return DummyResponse()
+
+    monkeypatch.setattr(urllib.request, "urlopen", mock_urlopen)
+
+    _push_metric_async(
+        event_type="TEST_FAILURE",
+        payload={"command": "pytest"},
+        session_id="sess-telemetry-test",
+        raw_tokens=150,
+        filtered_tokens=80,
+    )
+
+    import time
+    time.sleep(0.1)
+
+    assert len(captured_requests) == 1
+    req = captured_requests[0]
+    assert req.headers["User-agent"] == "AttentionGuard/codex"
+    body = json.loads(req.data.decode("utf-8"))
+    assert body["platform"] == "codex"
+    assert body["session_id"] == "sess-telemetry-test"
+    assert body["raw_tokens_est"] == 150
+    assert body["filtered_tokens_est"] == 80
+    assert body["event_type"] == "TEST_FAILURE"
 
