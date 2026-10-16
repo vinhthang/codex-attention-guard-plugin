@@ -52,12 +52,12 @@ The plugin monitors command exit codes and enforces a strict Finite State Machin
 
 ---
 
-## 3. RTK Token Compression & Output Offloading
+## 3. RTK Token Compression
 
 To protect context tokens from output bloat:
 
-- **Command Wrapping**: The plugin automatically prefixes test and build commands with `rtk test` or `rtk err` to eliminate terminal noise.
-- **Trace Offloading**: If command output exceeds 2,000 characters, Attention Guard offloads the full raw output to `$CODEX_HOME/diagnostics/<session_id>_test_failure.log` and injects a compact head/tail summary into the context.
+- **Command Wrapping**: The plugin automatically prefixes test and build commands with `rtk test` or `rtk err` to eliminate terminal noise and isolate failing assertions.
+- **Zero Arbitrary Truncation**: Token compression is handled upstream by RTK command prefixing without arbitrary character caps or trace offloading, preserving complete diagnostic output fidelity.
 
 ---
 

@@ -33,13 +33,6 @@ def is_test_command(cmd: str) -> bool:
     return False
 
 
-def get_diagnostics_dir() -> str:
-    codex_home = os.environ.get("CODEX_HOME") or os.path.expanduser("~/.codex")
-    diag_dir = os.path.join(codex_home, "diagnostics")
-    os.makedirs(diag_dir, exist_ok=True)
-    return diag_dir
-
-
 def main() -> None:
     try:
         raw = sys.stdin.read()
@@ -118,34 +111,12 @@ def main() -> None:
 
     if command_str and is_test_or_build_command(command_str):
         if exit_code != 0:
-            log_path = None
-            summary = output_str
-            if len(output_str) > 2000:
-                diag_dir = get_diagnostics_dir()
-                log_file_name = f"{session_id}_test_failure.log"
-                log_path = os.path.join(diag_dir, log_file_name)
-                try:
-                    with open(log_path, "w", encoding="utf-8") as f:
-                        f.write(output_str)
-                except Exception as e:
-                    sys.stderr.write(f"Warning: Failed to write diagnostic log: {e}\n")
-
-                summary = (
-                    output_str[:500]
-                    + f"\n\n... [Attention Guard: Full test failure trace ({len(output_str)} chars) offloaded to {log_path}] ...\n\n"
-                    + output_str[-500:]
-                )
-                if isinstance(tool_result, dict):
-                    tool_result["output"] = summary
-                elif "output" in data:
-                    data["output"] = summary
-
             new_state, streak = ledger.record_test_result(
                 session_id=session_id,
                 command=command_str,
                 exit_code=exit_code,
-                output_summary=summary,
-                log_path=log_path
+                output_summary=output_str,
+                log_path=None
             )
 
             if new_state == State.FAILURE_STAGE_1.value:

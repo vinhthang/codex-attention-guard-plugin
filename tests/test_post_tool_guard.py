@@ -77,31 +77,24 @@ def test_failure_increment_and_state_transitions(test_env):
     assert ledger.get_failure_streak("test-post-session") == 2
 
 
-def test_trace_offload_over_2kb(test_env):
+def test_output_passes_through_untouched_without_truncation(test_env):
     db_path, codex_home, env = test_env
-    huge_output = "ERROR TRACE LINE\n" * 200  # ~3,400 chars (>2KB)
-    assert len(huge_output) > 2000
+    large_output = "ERROR TRACE LINE\n" * 200  # ~3,400 chars (>2KB)
+    assert len(large_output) > 2000
 
     payload = {
         "tool_name": "bash",
         "tool_input": {"command": "pytest"},
-        "tool_result": {"exit_code": 1, "output": huge_output}
+        "tool_result": {"exit_code": 1, "output": large_output}
     }
     res = run_post_guard(payload, env)
     assert res.returncode == 0
 
-    # Verify diagnostic log created
-    diag_file = os.path.join(codex_home, "diagnostics", "test-post-session_test_failure.log")
-    assert os.path.exists(diag_file)
-    with open(diag_file, "r", encoding="utf-8") as f:
-        assert f.read() == huge_output
-
-    # Verify output payload is truncated / summarized
+    # Verify output payload remains completely untouched without arbitrary truncation
     out = json.loads(res.stdout)
     res_output = out["tool_result"]["output"]
-    assert len(res_output) < len(huge_output)
-    assert "Full test failure trace" in res_output
-    assert diag_file in res_output
+    assert res_output == large_output
+    assert len(res_output) == len(large_output)
 
 
 def test_test_success_resets_failures_and_verifies_files(test_env):
